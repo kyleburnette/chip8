@@ -6,16 +6,15 @@ void chip8_init(struct Chip8* chip8){
     chip8->sp = 0;
     chip8->delay_timer = 0;
     chip8->sound_timer = 0;
+    chip8->draw_flag = false;
 
     printf("Chip 8 initialized.\n");
 }
 
 bool chip8_load_game(struct Chip8* chip8, char* rom_name){
     char length = strlen(PATH) + strlen(rom_name) + 1;
-    char filename[length];
-    strcpy(filename, PATH);
-    strcat(filename, rom_name);
-
+    char* filename = (char*)malloc(length * sizeof(char));
+    sprintf(filename, "%s%s", PATH, rom_name);
     FILE* file = fopen(filename, "r");
 
     if(!file){
@@ -23,10 +22,11 @@ bool chip8_load_game(struct Chip8* chip8, char* rom_name){
         exit(ROM_OPEN_ERROR);
     } else {
         printf("Opened ROM: %s\n", filename);
+        free(filename);
     }
 
     fread(chip8->memory + START_ADDRESS, TOTAL_MEMORY - START_ADDRESS, 1, file);
-    fclose(file);
+    fclose(file); 
 }
 
 void chip8_handle_timers(struct Chip8* chip8){
@@ -56,15 +56,14 @@ uint16_t chip8_fetch_opcode(struct Chip8* chip8){
     return opcode;
 }
 
-void chip8_run(struct Chip8* chip8){
-    while (true){
+void chip8_run_one_cycle(struct Chip8* chip8){
         chip8->opcode = chip8_fetch_opcode(chip8);
-        printf("%X\n", chip8->opcode);
         switch(chip8->opcode & 0xF000){
             case 0x0000:
                 switch (chip8->opcode & 0x000F){
                     case 0x0000:
-                        memset(chip8->gfx, 0, GFX_BUFFER_DIMENSIONS);
+                        printf("Clearing graphics buffer...\n");
+                        memset(chip8->gfx, 1, GFX_BUFFER_DIMENSIONS * sizeof(chip8->gfx[0]));
                         break;
                     case 0x000E: {
                         chip8->pc = chip8->stack[chip8->sp];
@@ -219,13 +218,28 @@ void chip8_run(struct Chip8* chip8){
                 uint8_t regY = (chip8->opcode & 0x00F0) >> 4;
                 uint8_t height = (chip8->opcode & 0x000F);
                 uint8_t width = 8;
-                uint8_t valueToDraw = chip8->memory[chip8->indexRegister];
                 uint8_t coordX = chip8->V[regX];
                 uint8_t coordY = chip8->V[regY];
                 chip8->V[0xF] = 0;
 
-            }
+                for (int i = 0; i < height; i++){
+                    for (int j = 0; j < 8; j++){
+                        uint8_t pixel = chip8->memory[chip8->indexRegister + i];
+                        if (pixel & (0x80 >> j)){
+                            int index = (chip8->V[regX] + j) % 64 + ((chip8->V[regY] + i) % 32) * 64;
+                            if (chip8->gfx[index] == 1){
+                                chip8->V[0xF] = 1;
+                                chip8->gfx[index] = 0xFF000000;
+                            } else {
+                                chip8->gfx[index] = 0xFFFFFFFF;
+                            }
+                            chip8->draw_flag = true;
+                        }
+                    }
+                }
                 break;
+            }
+                
             case 0xE000:
                 printf("0xE000\n");
                 break;
@@ -288,7 +302,7 @@ void chip8_run(struct Chip8* chip8){
                 break;
             default:
                 break;
-        }
+        
     chip8_handle_timers(chip8);
     }
 }
