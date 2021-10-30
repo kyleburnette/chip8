@@ -11,7 +11,8 @@ void chip8_init(struct Chip8* chip8){
 }
 
 bool chip8_load_game(struct Chip8* chip8, char* rom_name){
-    char filename[strlen(PATH) + strlen(rom_name) + 1];
+    char length = strlen(PATH) + strlen(rom_name) + 1;
+    char filename[length];
     strcpy(filename, PATH);
     strcat(filename, rom_name);
 
@@ -58,6 +59,7 @@ uint16_t chip8_fetch_opcode(struct Chip8* chip8){
 void chip8_run(struct Chip8* chip8){
     while (true){
         chip8->opcode = chip8_fetch_opcode(chip8);
+        printf("%X\n", chip8->opcode);
         switch(chip8->opcode & 0xF000){
             case 0x0000:
                 switch (chip8->opcode & 0x000F){
@@ -216,12 +218,13 @@ void chip8_run(struct Chip8* chip8){
                 uint8_t regX = (chip8->opcode & 0x0F00) >> 8;
                 uint8_t regY = (chip8->opcode & 0x00F0) >> 4;
                 uint8_t height = (chip8->opcode & 0x000F);
+                uint8_t width = 8;
+                uint8_t valueToDraw = chip8->memory[chip8->indexRegister];
                 uint8_t coordX = chip8->V[regX];
                 uint8_t coordY = chip8->V[regY];
                 chip8->V[0xF] = 0;
 
             }
-                printf("0xD000\n");
                 break;
             case 0xE000:
                 printf("0xE000\n");

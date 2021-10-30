@@ -1,8 +1,9 @@
-#include <SDL.h>
+#define SDL_MAIN_HANDLED
+#include <SDL2\SDL.h>
 
 #include "chip8.h"
 
-int main(int argc, char* args[]){
+int main(int argc, char* argv[]){
     struct Chip8 chip8;
 
     chip8_init(&chip8);
